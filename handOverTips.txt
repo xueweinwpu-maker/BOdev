@@ -1,0 +1,120 @@
+### **项目交接说明：基于 MTGP 的宽速域飞行器气动设计框架 (AIAA J)**
+
+**To:** Yanchao
+**From:** Xiangyu
+**Date:** 2025-12-24
+**Subject:** AIAA J 论文代码框架与实验计划交接
+
+---
+
+### **1. 项目背景与定位**
+
+我们需要基于现有的数据储备，冲击一篇 **AIAA Journal**。核心创新点在于利用 **多任务高斯过程 (MTGP)** 解决宽速域（Ma 6 & Ma 10）气动设计中的“数据稀缺”与“多工况协同”问题。
+
+为了让你快速上手，需明确我们目前的**三条学术线**，切勿混淆：
+
+1. **航空学报 (已发表):** 变形飞机双层优化。**（本项目的 *数据源*，但*逻辑*已弃用）**
+2. **AST (在审):** 乘波体 WDA 降维。**（与本项目无关，不要引入 WDA）**
+3. **AIAA J (本项目):** 宽速域 MTGP。**（核心任务）**
+
+### **2. 核心方法论的变化 (Critical Strategy Shift)**
+
+我们在这篇文章中**不再使用**航空学报那篇的“双层优化 (Bi-Level Optimization)”架构，而是采用**“展平策略 (Joint Optimization)”**。
+
+* **Old Way (航空学报):** 外层定形状 -> 内层优选后掠角 -> 返回性能。
+* *缺点：* 信息黑箱，丢失了物理相关性，且内层优化噪声大。
+
+
+* **New Way (本项目):**
+* 我们将问题简化为**“固定构型优化”**。
+* **Input:** 锁定 Sweep (`ratio[15]`) 为固定值，只优化 15 个几何变量 (`ratio[0-14]`)。
+* **Output:** 利用 MTGP 同时学习 Ma 6 和 Ma 10 的响应。**利用输出端的强物理相关性（Output Correlation）来加速收敛。**
+
+
+
+### **3. 代码框架与数据**
+
+代码已整理在 Git 仓库/文件夹中，基于 BoTorch 开发。核心脚本均已更新为支持 MTGP 的版本。
+
+#### **3.1 关键文件说明**
+
+* **`src/problem_def_uncon.py`**: **[核心]** 定义了本次 AIAA J 的 Benchmark 问题。
+* 它加载 `TruthPipeline`。
+* 它定义了两个目标：`Ma6_K` 和 `Ma10_K`。
+* **注意：** 这里没有约束，先做 Unconstrained 验证。
+
+
+* **`src/bo_optimizer.py`**: **[核心]** 优化器逻辑。
+* 增加了 `model_type="mtgp"` 的分支。
+* 实现了数据 Reshape 和 MultiTaskGP 的训练逻辑。
+* 实现了 Weighted Sum (0.5/0.5) 的采集函数。
+
+
+* **`surrogates/pipelines.py`**: 包含了 `TruthPipeline` 类。
+* 这是一个“真值机器”，它读取预训练好的高精度代理模型 (`.pkl`) 来模拟 CFD 计算，确保实验可重复且高效。
+
+
+* **`main.py`**: 主入口，增加了 `--use_mtgp` 开关。
+
+#### **3.2 数据源**
+
+* 使用航空学报那篇论文积累的 CSV 数据（16维：15个截面参数 + 1个后掠角）。
+* 训练数据路径：`data/train_dataM6.csv` 和 `data/train_dataM10_0_extended.csv`。
+
+---
+
+### **4. 你的任务清单 (Action Items)**
+
+请按顺序执行以下步骤，目标是产出用于论文的对比收敛图。
+
+#### **Step 1: 生成真值模型 (Truth Machine)**
+
+我们需要先训练出高精度的 Oracle 模型，作为优化的“裁判”。
+
+* **操作：** 运行 `tools/run_validation.py`。
+* **检查：** 确保 `trained_models/` 目录下生成了 `pipeline_Ma6_Truth.pkl` 和 `pipeline_Ma10_Truth.pkl`。
+* *注：这些模型精度极高（R2 > 0.99），代表“真实物理环境”。*
+
+#### **Step 2: 运行 Baseline (独立 GP)**
+
+作为对照组，运行标准的独立高斯过程优化。
+
+* **命令：**
+```bash
+python main.py --problem src.problem_def_uncon
+
+```
+
+
+* **目的：** 模拟如果不使用多任务学习，优化效率是多少。
+
+#### **Step 3: 运行 MTGP (本文方法)**
+
+运行我们要提出的方法。
+
+* **命令：**
+```bash
+python main.py --problem src.problem_def_uncon --use_mtgp
+
+```
+
+
+* **目的：** 验证在同样的数据量下，MTGP 是否能更快找到最优解。
+
+#### **Step 4: 数据后处理与绘图**
+
+* 两个运行结束后，在 `results/` 文件夹下会生成 CSV 历史数据。
+* 请绘制 **Weighted K (0.5*Ma6 + 0.5*Ma10) vs. Iterations** 的对比曲线。
+* **预期结果：** MTGP 的曲线应该上升得更陡峭（收敛更快）。
+
+---
+
+### **5. 注意事项 (Notes)**
+
+1. **不要碰 Adaptive Inner Loop：** 代码里保留了一些 `Single_Point_ad` 的旧逻辑，那是为了兼容老代码，本次实验**不需要**开启 `--adaptive` 选项。
+2. **关于 Sweep 变量：** 虽然数据里有第 16 维（Sweep），但在 `TruthPipeline` 里我已经把它强制固定了（Hardcoded 为 1.0 或某个定值）。**不要尝试去优化第 16 维**，我们目前的叙事逻辑是“固定构型下的多工况加速”。
+3. **遇到问题：** 如果收敛效果不明显，先检查 `mtgp_rank` 的设置，或者检查 Ma 6 和 Ma 10 的数据相关性（Pearson Correlation）。
+
+拿到初步对比图后，尽快找我讨论。
+
+---

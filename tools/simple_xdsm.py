@@ -14,13 +14,13 @@ x = XDSM(use_sfmath=True)
 
 # 2. Define core components
 x.add_system("param", FUNC, [r"\text{WDA-Informed}",r"\text{Parameterization}"], stack=False)
-x.add_system("DoEs", FUNC, [r"\text{Design of}",r"\text{Experimensts (DoEs)}"], stack=False)
-x.add_system("opt", OPT, r"\textbf{Bayesian Optimizer}")
+x.add_system("DoEs", FUNC, [r"\text{Design of}",r"\text{Experiments (DoEs)}"], stack=False)
+x.add_system("opt", OPT, [r"\textbf{Multi-objective}",r"\textbf{Bayesian Optimizer}"])
 x.add_system("eval", SOLVER, [r"\text{Geometry, }",r" Mesh \& CFD"], stack=True)
 # x.add_system("param", FUNC, r"\text{WDA-Informed Parameterization}", stack=False)
 
 # Internal BO components
-x.add_system("surrogate", FUNC, [r"\text{Surrogate Modeling }",r"\text{(Gaussin Process)}"], stack=False)
+x.add_system("surrogate", FUNC, [r"\text{Surrogate Modeling }",r"\text{(Gaussian Process)}"], stack=False)
 x.add_system("acqf", FUNC, [r"\text{Acquisition Function}",r"\text{Optimization}"], stack=False)
 
 # 3. Define the main optimization process on the diagonal

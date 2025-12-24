@@ -85,7 +85,7 @@ def define_problem() -> OptimizationConfig:
         objectives=objectives,
         constraints=constraints,
         n_initial_samples=41,  # At least as many as dimensions
-        n_bo_iterations=320,
+        n_bo_iterations=20,
         batch_size=1,
         user_initial_points=user_initial_point,
         num_restarts=10,

@@ -1,0 +1,126 @@
+
+%%% Preamble Requirements %%%
+% \usepackage{geometry}
+% \usepackage{amsfonts}
+% \usepackage{amsmath}
+% \usepackage{amssymb}
+% \usepackage{tikz}
+
+% Optional packages such as sfmath set through python interface
+% \usepackage{sfmath}
+
+% \usetikzlibrary{arrows,chains,positioning,scopes,shapes.geometric,shapes.misc,shadows}
+
+%%% End Preamble Requirements %%%
+
+\input{"C:/Users/xiang/anaconda3/envs/botorch_env/lib/site-packages/pyxdsm/diagram_styles"}
+\begin{tikzpicture}
+
+\matrix[MatrixSetup]{
+%Row 0
+&
+\node [DataIO] (output_param) {$\text{Baseline Vehicle, WDA}$};&
+&
+&
+\node [DataIO] (output_eval) {$\text{Design Condition}$};&
+&
+&
+\\
+%Row 1
+&
+\node [Function] (param) {$\begin{array}{c}\text{WDA-Informed} \\ \text{Parameterization}\end{array}$};&
+\node [DataInter] (param-DoEs) {$DVs, \text{Bounds}$};&
+&
+&
+&
+&
+\\
+%Row 2
+&
+&
+\node [Function] (DoEs) {$\begin{array}{c}\text{Design of} \\ \text{Experiments (DoEs)}\end{array}$};&
+\node [DataInter] (DoEs-opt) {$X^0, Y^0$};&
+&
+&
+&
+\\
+%Row 3
+\node [DataIO] (left_output_opt) {$\text{Pareto Frontier } $};&
+&
+&
+\node [Optimization] (opt) {$\begin{array}{c}\textbf{Multi-objective} \\ \textbf{Bayesian Optimizer}\end{array}$};&
+\node [DataInter] (opt-eval) {$\text{Updated DVs } (x_k)$};&
+\node [DataInter] (opt-surrogate) {$X, Y = \{x_i, y_i\}_{i=1}^k$};&
+&
+\\
+%Row 4
+&
+&
+&
+\node [DataInter] (eval-opt) {$y_k = (\text{Vol.}, L/D, \text{etc.})$};&
+\node [MDA,stack] (eval) {$\begin{array}{c}\text{Geometry, } \\  Mesh \& CFD\end{array}$};&
+&
+&
+\\
+%Row 5
+&
+&
+&
+&
+&
+\node [Function] (surrogate) {$\begin{array}{c}\text{Surrogate Modeling } \\ \text{(Gaussian Process)}\end{array}$};&
+\node [DataInter] (surrogate-acqf) {$\text{Surrogate Models}$};&
+\\
+%Row 6
+&
+&
+&
+\node [DataInter] (acqf-opt) {$x_{k+1}$};&
+&
+&
+\node [Function] (acqf) {$\begin{array}{c}\text{Acquisition Function} \\ \text{Optimization}\end{array}$};&
+\\
+%Row 7
+&
+&
+&
+&
+&
+&
+&
+\\
+};
+
+% XDSM process chains
+{ [start chain=process]
+ \begin{pgfonlayer}{process} 
+\chainin (opt);
+\chainin (eval) [join=by ProcessHVA];
+\chainin (opt) [join=by ProcessHVA];
+\end{pgfonlayer}
+}
+
+\begin{pgfonlayer}{data}
+\path
+% Horizontal edges
+(param) edge [DataLine] (param-DoEs)
+(DoEs) edge [DataLine] (DoEs-opt)
+(opt) edge [DataLine] (opt-eval)
+(eval) edge [DataLine] (eval-opt)
+(opt) edge [DataLine] (opt-surrogate)
+(surrogate) edge [DataLine] (surrogate-acqf)
+(acqf) edge [DataLine] (acqf-opt)
+(opt) edge [DataLine] (left_output_opt)
+% Vertical edges
+(param-DoEs) edge [DataLine] (DoEs)
+(DoEs-opt) edge [DataLine] (opt)
+(opt-eval) edge [DataLine] (eval)
+(eval-opt) edge [DataLine] (opt)
+(opt-surrogate) edge [DataLine] (surrogate)
+(surrogate-acqf) edge [DataLine] (acqf)
+(acqf-opt) edge [DataLine] (opt)
+(param) edge [DataLine] (output_param)
+(eval) edge [DataLine] (output_eval);
+\end{pgfonlayer}
+
+\end{tikzpicture}
