@@ -2,7 +2,7 @@
 
 **To:** Yanchao
 **From:** Xiangyu
-**Date:** 2025-12-24
+**Date:** 2025-12-XX
 **Subject:** AIAA J 论文代码框架与实验计划交接
 
 ---
